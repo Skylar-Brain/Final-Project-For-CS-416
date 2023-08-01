@@ -1,1 +1,234 @@
-Hello World
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Interactive D3 Diagram with Pagination</title>
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+
+  <style>
+    rect {
+    }
+
+    .pagination {
+      margin-top: 20px;
+    }
+
+    .pagination button {
+      margin-right: 5px;
+    }
+
+    .axis text {
+      font-size: 14px;
+    }
+
+    .axis path,
+    .axis line {
+      fill: none;
+      stroke: #000;
+      shape-rendering: crispEdges;
+    }
+    
+    .tooltip {
+      position: absolute;
+      background-color: white;
+      padding: 5px;
+      border: 1px solid black;
+      border-radius: 5px;
+      pointer-events: none;  
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+  </style>
+</head>
+
+<body>
+
+  <script>
+    
+    var dataset = [{
+        page: 'Overview',
+        values: [19818, 371361, 24263, 4097, 779522, 15275],
+        annotations: [19818, 371361, 24263, 4097, 779522, 15275]
+      },
+      {
+        page: 'Fatality',
+        values: [19818, 0, 0, 134, 310, 14371],
+        annotations: [19818, 0, 0, 134, 310, 14371]
+      },
+      {
+        page: 'Non-fatality',
+        values: [0, 371361, 24263, 162, 779212, 418],
+        annotations: [0, 371361, 24263, 162, 779212, 418]
+      }
+    ];
+    var tooltip = d3.select("body").append("div").attr("class", "tooltip");
+    
+    // Create color scale
+    var color = d3.scaleOrdinal()
+      .domain(d3.range(dataset[0].values.length))
+      .range(["#1b9e77", "#d95f02", "#7570b3", "#e7298a", "#66a61e"]);
+    
+    var margin = {
+        top: 30,
+        right: 20,
+        bottom: 50,
+        left: 70
+      },
+      width = 1000 - margin.left - margin.right,
+      height = 300 - margin.top - margin.bottom;
+    var svg = d3.select("body")
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    var xScale = d3.scaleBand()
+      .domain(d3.range(dataset[0].values.length))
+      .rangeRound([0, width]);
+    var yScale = d3.scaleLinear()
+      .domain([0, d3.max(dataset[0].values)])
+      .range([height, 0]);
+    
+    var xAxisName = ["Death Certificates", "EMS", "Hospital Records", "Newspaper Clippings", "Surveys", "Multiple"];
+    var xAxis = d3.axisBottom(xScale).tickFormat(function(d, i) {
+      return xAxisName[i];
+    });
+    var yAxis = d3.axisLeft(yScale);
+    
+    
+    svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+      .append("text")
+      .attr("x", width / 2)
+      .attr("y", margin.bottom / 2)
+      .style("text-anchor", "middle")
+      .text("Data Points");
+
+    svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", -margin.left)
+      .attr("x", -height / 2)
+      .attr("dy", "1em")
+      .style("text-anchor", "middle")
+      .text("Values");
+
+    function drawBarChart(pageData) {
+  
+      svg.selectAll('rect')
+        .data(pageData.values)
+        .enter()
+        .append('rect')
+        .attr('x', function(d, i) {
+          return xScale(i);
+        })
+        .attr('y', function(d) {
+          return yScale(d);
+        })
+        .attr('width', xScale.bandwidth())
+        .attr('height', function(d) {
+          return height - yScale(d);
+        })
+        .attr('fill', function(d, i) {
+          return color(i);
+      })
+         .on('mouseover', function(d) {
+          tooltip.style('opacity', 1)
+            .html('Value: ' + d);
+        })
+        .on('mousemove', function() {
+          tooltip.style('left', (d3.event.pageX + 10) + 'px')
+            .style('top', (d3.event.pageY - 25) + 'px');
+        })
+        .on('mouseout', function() {
+          tooltip.style('opacity', 0);
+        });;
+      
+      
+        svg.selectAll('.annotation')
+    .data(pageData.annotations)
+    .enter()
+    .append('text')
+    .attr('class', 'annotation')
+    .attr('x', function(d, i) {
+          return xScale(i) + xScale.bandwidth() / 2; 
+    })
+    .attr('y', function(d, i) {
+      return yScale(pageData.values[i]) - 5; 
+    })
+    .text(function(d) {
+      return d;
+    })
+    .style('text-anchor', 'middle')
+    .style('font-size', '12px');
+    }
+    
+    
+    drawBarChart(dataset[0]);
+    var pagination = d3.select('body').append('div').attr('class', 'pagination');
+    
+    var pageName = ['Overview', 'Fatality', 'Non-Fatality']
+    dataset.forEach(function(pageData, i) {
+      pagination.append('button')
+        .text(pageName[i])
+        .on('click', function() {
+          svg.selectAll('rect')
+            .data(pageData.values)
+            .transition()
+            .attr('y', function(d) {
+              return yScale(d);
+            })
+            .attr('height', function(d) {
+              return height - yScale(d);
+            })
+            .attr('fill', function(d, i) {
+              return color(i);
+            })
+            .select("title")  
+            .text(function(d) {
+              return "Value: " + d;
+            })
+          .on('mouseover', function(d) {
+              tooltip.style('opacity', 1)
+                .html('Value: ' + d);
+            })
+            .on('mousemove', function() {
+              tooltip.style('left', (d3.event.pageX + 10) + 'px')
+                  .style('top', (d3.event.pageY - 25) + 'px');
+            })
+            .on('mouseout', function() {
+              tooltip.style('opacity', 0);
+            });;
+        
+        if (pageData.annotations) {
+        svg.selectAll('.annotation')
+        .remove(); 
+
+      svg.selectAll('.annotation')
+        .data(pageData.annotations)
+        .enter()
+        .append('text')
+        .attr('class', 'annotation')
+        .attr('x', function(d, i) {
+          return xScale(i) + xScale.bandwidth() / 2; 
+        })
+        .attr('y', function(d, i) {
+          return yScale(pageData.values[i]) - 5; 
+        })
+        .text(function(d) {
+          return d;
+        })
+        .style('text-anchor', 'middle')
+        .style('font-size', '12px');
+        }
+        });
+    });
+
+  </script>
+</body>
+
+</html>
